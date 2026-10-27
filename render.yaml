@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: room-booking
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # 워커 1개 필수: 예약을 메모리에 기억하므로 워커가 여러 개면 확인표 2번이 틀어진다
+    startCommand: gunicorn -w 1 --threads 4 -b 0.0.0.0:$PORT app:app
