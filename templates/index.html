@@ -27,15 +27,18 @@
 </style>
 </head>
 <body>
+
+<datalist id="rooms"><option value="A101"><option value="A102"><option value="B201"></datalist>
+<datalist id="days"><option value="월"><option value="화"><option value="수"><option value="목"><option value="금"></datalist>
 <main>
   <h1>강의실 예약</h1>
 
   <section>
     <h2>1. 예약</h2>
     <label>강의실</label>
-    <select id="b-room"><option>A101</option><option>A102</option><option>B201</option></select>
+    <input id="b-room" type="text" list="rooms" placeholder="예: A101" autocomplete="off">
     <label>요일</label>
-    <select id="b-day"><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option></select>
+    <input id="b-day" type="text" list="days" placeholder="예: 월" autocomplete="off">
     <div class="row">
       <div><label>시작(시)</label><input id="b-start" type="number" step="any" inputmode="decimal" placeholder="예: 10"></div>
       <div><label>끝(시)</label><input id="b-end" type="number" step="any" inputmode="decimal" placeholder="예: 12"></div>
@@ -49,9 +52,9 @@
   <section>
     <h2>2. 취소</h2>
     <label>강의실</label>
-    <select id="c-room"><option>A101</option><option>A102</option><option>B201</option></select>
+    <input id="c-room" type="text" list="rooms" placeholder="예: A101" autocomplete="off">
     <label>요일</label>
-    <select id="c-day"><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option></select>
+    <input id="c-day" type="text" list="days" placeholder="예: 월" autocomplete="off">
     <label>시작 시각(시)</label>
     <input id="c-start" type="number" step="any" inputmode="decimal" placeholder="예: 13">
     <label>이름</label>
@@ -63,8 +66,8 @@
   <section>
     <h2>3. 시간표</h2>
     <div class="row">
-      <div><label>강의실</label><select id="s-room"><option>A101</option><option>A102</option><option>B201</option></select></div>
-      <div><label>요일</label><select id="s-day"><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option></select></div>
+      <div><label>강의실</label><input id="s-room" type="text" list="rooms" placeholder="예: A101" autocomplete="off"></div>
+      <div><label>요일</label><input id="s-day" type="text" list="days" placeholder="예: 월" autocomplete="off"></div>
     </div>
     <button id="s-btn" class="sub">시간표 보기</button>
     <div id="s-out"></div>
@@ -94,8 +97,8 @@
   }
 
   async function loadSchedule() {
-    const room = encodeURIComponent($("s-room").value);
-    const day = encodeURIComponent($("s-day").value);
+    const room = encodeURIComponent($("s-room").value.trim());
+    const day = encodeURIComponent($("s-day").value.trim());
     const r = await fetch(`/api/schedule?room=${room}&day=${day}`);
     const items = (await r.json()).items;
     const out = $("s-out");
@@ -106,14 +109,14 @@
   }
 
   $("b-btn").onclick = async () => {
-    const ok = await post("/api/book", { room: $("b-room").value, day: $("b-day").value, start: num("b-start"), end: num("b-end"), name: $("b-name").value.trim() });
+    const ok = await post("/api/book", { room: $("b-room").value.trim(), day: $("b-day").value.trim(), start: num("b-start"), end: num("b-end"), name: $("b-name").value.trim() });
     show("b-result", ok, "✅ 예약 성공", "❌ 예약 실패");
     $("s-room").value = $("b-room").value; $("s-day").value = $("b-day").value;
     loadSchedule();
   };
 
   $("c-btn").onclick = async () => {
-    const ok = await post("/api/cancel", { room: $("c-room").value, day: $("c-day").value, start: num("c-start"), name: $("c-name").value.trim() });
+    const ok = await post("/api/cancel", { room: $("c-room").value.trim(), day: $("c-day").value.trim(), start: num("c-start"), name: $("c-name").value.trim() });
     show("c-result", ok, "✅ 취소 성공", "❌ 취소 실패");
     $("s-room").value = $("c-room").value; $("s-day").value = $("c-day").value;
     loadSchedule();
