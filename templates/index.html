@@ -75,6 +75,7 @@
 </main>
 
 <script>
+  const API = location.hostname.endsWith("github.io") ? "https://room-booking-9oxi.onrender.com" : "";
   const $ = (id) => document.getElementById(id);
 
   // 빈칸은 null, 숫자 칸은 숫자로 보낸다. (10.5 같은 값도 그대로 보내서 solution.py가 판단)
@@ -92,14 +93,14 @@
   }
 
   async function post(url, body) {
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch(API + url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     return (await r.json()).ok === true;
   }
 
   async function loadSchedule() {
     const room = encodeURIComponent($("s-room").value.trim());
     const day = encodeURIComponent($("s-day").value.trim());
-    const r = await fetch(`/api/schedule?room=${room}&day=${day}`);
+    const r = await fetch(API + `/api/schedule?room=${room}&day=${day}`);
     const items = (await r.json()).items;
     const out = $("s-out");
     if (items.length === 0) { out.innerHTML = '<div class="empty">예약이 없습니다</div>'; return; }
@@ -123,6 +124,7 @@
   };
 
   $("s-btn").onclick = loadSchedule;
+  fetch(API + "/api/schedule?room=A101&day=%EC%9B%94").catch(() => {});
 </script>
 </body>
 </html>

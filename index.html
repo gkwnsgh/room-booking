@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>강의실 예약</title>
+<style>
+  :root { --ok:#1a7f37; --okbg:#e6f6ea; --bad:#c62828; --badbg:#fdeaea; --line:#d9dde3; --ink:#1f2933; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif; color:var(--ink); background:#f5f6f8; }
+  main { max-width:560px; margin:0 auto; }
+  h1 { font-size:22px; margin:4px 0 16px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  h2 { font-size:17px; margin:0 0 12px; }
+  label { display:block; font-size:13px; color:#52606d; margin:10px 0 4px; }
+  select, input { width:100%; padding:10px; font-size:16px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  .row { display:flex; gap:10px; } .row > div { flex:1; }
+  button { width:100%; margin-top:14px; padding:12px; font-size:16px; font-weight:600; color:#fff; background:#2f5bea; border:0; border-radius:8px; cursor:pointer; }
+  button.sub { background:#52606d; }
+  .result { display:none; margin-top:12px; padding:14px; border-radius:8px; font-size:20px; font-weight:700; text-align:center; }
+  .result.success { display:block; color:var(--ok); background:var(--okbg); border:2px solid var(--ok); }
+  .result.error { display:block; color:var(--bad); background:var(--badbg); border:2px solid var(--bad); }
+  table { width:100%; border-collapse:collapse; margin-top:12px; }
+  th, td { padding:10px; border-bottom:1px solid var(--line); text-align:center; }
+  th { background:#f0f2f5; font-size:13px; }
+  .empty { margin-top:12px; color:#7b8794; text-align:center; }
+</style>
+</head>
+<body>
+
+<datalist id="rooms"><option value="A101"><option value="A102"><option value="B201"></datalist>
+<datalist id="days"><option value="월"><option value="화"><option value="수"><option value="목"><option value="금"></datalist>
+<main>
+  <h1>강의실 예약</h1>
+
+  <section>
+    <h2>1. 예약</h2>
+    <label>강의실</label>
+    <input id="b-room" type="text" list="rooms" placeholder="예: A101" autocomplete="off">
+    <label>요일</label>
+    <input id="b-day" type="text" list="days" placeholder="예: 월" autocomplete="off">
+    <div class="row">
+      <div><label>시작(시)</label><input id="b-start" type="number" step="any" inputmode="decimal" placeholder="예: 10"></div>
+      <div><label>끝(시)</label><input id="b-end" type="number" step="any" inputmode="decimal" placeholder="예: 12"></div>
+    </div>
+    <label>이름</label>
+    <input id="b-name" type="text" placeholder="예: 김민수">
+    <button id="b-btn">예약하기</button>
+    <div id="b-result" class="result"></div>
+  </section>
+
+  <section>
+    <h2>2. 취소</h2>
+    <label>강의실</label>
+    <input id="c-room" type="text" list="rooms" placeholder="예: A101" autocomplete="off">
+    <label>요일</label>
+    <input id="c-day" type="text" list="days" placeholder="예: 월" autocomplete="off">
+    <label>시작 시각(시)</label>
+    <input id="c-start" type="number" step="any" inputmode="decimal" placeholder="예: 13">
+    <label>이름</label>
+    <input id="c-name" type="text" placeholder="예약한 사람 이름">
+    <button id="c-btn" class="sub">취소하기</button>
+    <div id="c-result" class="result"></div>
+  </section>
+
+  <section>
+    <h2>3. 시간표</h2>
+    <div class="row">
+      <div><label>강의실</label><input id="s-room" type="text" list="rooms" placeholder="예: A101" autocomplete="off"></div>
+      <div><label>요일</label><input id="s-day" type="text" list="days" placeholder="예: 월" autocomplete="off"></div>
+    </div>
+    <button id="s-btn" class="sub">시간표 보기</button>
+    <div id="s-out"></div>
+  </section>
+</main>
+
+<script>
+  const API = location.hostname.endsWith("github.io") ? "https://room-booking-9oxi.onrender.com" : "";
+  const $ = (id) => document.getElementById(id);
+
+  // 빈칸은 null, 숫자 칸은 숫자로 보낸다. (10.5 같은 값도 그대로 보내서 solution.py가 판단)
+  function num(id) {
+    const v = $(id).value.trim();
+    if (v === "") return null;
+    const n = Number(v);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  function show(id, ok, okText, failText) {
+    const el = $(id);
+    el.className = "result " + (ok ? "success" : "error");
+    el.textContent = ok ? okText : failText;
+  }
+
+  async function post(url, body) {
+    const r = await fetch(API + url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return (await r.json()).ok === true;
+  }
+
+  async function loadSchedule() {
+    const room = encodeURIComponent($("s-room").value.trim());
+    const day = encodeURIComponent($("s-day").value.trim());
+    const r = await fetch(API + `/api/schedule?room=${room}&day=${day}`);
+    const items = (await r.json()).items;
+    const out = $("s-out");
+    if (items.length === 0) { out.innerHTML = '<div class="empty">예약이 없습니다</div>'; return; }
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    out.innerHTML = "<table><tr><th>시작</th><th>끝</th><th>예약자</th></tr>" +
+      items.map((x) => `<tr><td>${x[0]}시</td><td>${x[1]}시</td><td>${esc(x[2])}</td></tr>`).join("") + "</table>";
+  }
+
+  $("b-btn").onclick = async () => {
+    const ok = await post("/api/book", { room: $("b-room").value.trim(), day: $("b-day").value.trim(), start: num("b-start"), end: num("b-end"), name: $("b-name").value.trim() });
+    show("b-result", ok, "✅ 예약 성공", "❌ 예약 실패");
+    $("s-room").value = $("b-room").value; $("s-day").value = $("b-day").value;
+    loadSchedule();
+  };
+
+  $("c-btn").onclick = async () => {
+    const ok = await post("/api/cancel", { room: $("c-room").value.trim(), day: $("c-day").value.trim(), start: num("c-start"), name: $("c-name").value.trim() });
+    show("c-result", ok, "✅ 취소 성공", "❌ 취소 실패");
+    $("s-room").value = $("c-room").value; $("s-day").value = $("c-day").value;
+    loadSchedule();
+  };
+
+  $("s-btn").onclick = loadSchedule;
+  fetch(API + "/api/schedule?room=A101&day=%EC%9B%94").catch(() => {});
+</script>
+</body>
+</html>

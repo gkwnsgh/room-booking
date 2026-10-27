@@ -11,6 +11,20 @@ app = Flask(__name__)
 rb = RoomBooking()
 
 
+@app.after_request
+def add_cors(resp):
+    # GitHub Pages(다른 주소)에서 이 서버의 API를 부를 수 있게 허용
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return resp
+
+
+@app.route("/api/<path:_p>", methods=["OPTIONS"])
+def api_options(_p):
+    return ("", 204)
+
+
 def _body():
     return request.get_json(silent=True) or {}
 
